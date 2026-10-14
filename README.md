@@ -12,7 +12,7 @@ Training projects, tutorials and small experiments from 2020–2025, collected i
 | [mevn-auth](mevn-auth) | MongoDB, Express, Vue, Node | Authentication with bcrypt and JWT on the MEVN stack |
 | [sapper-blog](sapper-blog) | Svelte, Sapper, GraphCMS | Blog on a headless CMS |
 | [redwood-blog](redwood-blog) | RedwoodJS | Blog following the RedwoodJS tutorial (Netlify + Heroku) |
-| [pubkompanjon](pubkompanjon) | Gatsby, React, Firebase | A pub companion web app on Firebase |
+| [pubkompanjon](pubkompanjon) | Gatsby, React | First steps of a pub companion site for Restaurang Carmen, built on the gatsby-simplefolio template |
 | [global-template](global-template) | HTML, CSS | My starter template for HTML/CSS work |
 | [port-of-call](port-of-call) | HTML, CSS | An early portfolio template |
 
