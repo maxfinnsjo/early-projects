@@ -1,0 +1,1429 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Water Droplet Click-Pop</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #0c1622, #203a55);
+                overflow: hidden;
+            }
+
+            .pattern {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background-color: #0a1520;
+                background-image: linear-gradient(
+                        rgba(255, 255, 255, 0.03) 1px,
+                        transparent 1px
+                    ),
+                    linear-gradient(
+                        90deg,
+                        rgba(255, 255, 255, 0.03) 1px,
+                        transparent 1px
+                    );
+                background-size: 20px 20px;
+                background-position: 0 0;
+                z-index: -1;
+            }
+
+            .droplet-container {
+                position: relative;
+                width: 600px; /* Larger container for ripples to fade naturally */
+                height: 600px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                -webkit-tap-highlight-color: transparent; /* Prevent tap highlight on iOS */
+                outline: none; /* Remove outline */
+                user-select: none; /* Prevent text selection */
+                touch-action: manipulation; /* Improve touch handling */
+            }
+
+            /* Make sure SVG takes full container size */
+            svg {
+                width: 100%;
+                height: 100%;
+                display: block;
+                -webkit-tap-highlight-color: transparent; /* Prevent tap highlight on iOS */
+                outline: none; /* Remove outline */
+                user-select: none; /* Prevent text selection */
+            }
+
+            /* Enhance the #droplet-container styles in the SVG <style> section */
+            #droplet-container {
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+                outline: none;
+                user-select: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="pattern"></div>
+        <div class="droplet-container">
+            <svg
+                width="600"
+                height="600"
+                viewBox="0 0 600 600"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <defs>
+                    <!-- Main unified water gradient with softer transitions -->
+                    <radialGradient
+                        id="waterBase"
+                        cx="45%"
+                        cy="45%"
+                        r="60%"
+                        fx="30%"
+                        fy="30%"
+                    >
+                        <stop
+                            offset="0%"
+                            stop-color="#ffffff"
+                            stop-opacity="0.85"
+                        />
+                        <stop
+                            offset="40%"
+                            stop-color="#e6f7ff"
+                            stop-opacity="0.8"
+                        />
+                        <stop
+                            offset="70%"
+                            stop-color="#cbeeff"
+                            stop-opacity="0.7"
+                        />
+                        <stop
+                            offset="100%"
+                            stop-color="#94d2f8"
+                            stop-opacity="0.6"
+                        />
+                    </radialGradient>
+
+                    <!-- Softer highlight gradient -->
+                    <radialGradient
+                        id="waterHighlight"
+                        cx="35%"
+                        cy="35%"
+                        r="60%"
+                        fx="25%"
+                        fy="25%"
+                    >
+                        <stop
+                            offset="0%"
+                            stop-color="#ffffff"
+                            stop-opacity="0.9"
+                        />
+                        <stop
+                            offset="40%"
+                            stop-color="#ffffff"
+                            stop-opacity="0.4"
+                        />
+                        <stop
+                            offset="100%"
+                            stop-color="#ffffff"
+                            stop-opacity="0"
+                        />
+                    </radialGradient>
+
+                    <!-- Soft glow for edge treatment -->
+                    <filter
+                        id="softGlow"
+                        x="-50%"
+                        y="-50%"
+                        width="200%"
+                        height="200%"
+                    >
+                        <feGaussianBlur stdDeviation="6" result="glow" />
+                        <feComposite
+                            in="SourceGraphic"
+                            in2="glow"
+                            operator="over"
+                        />
+                    </filter>
+
+                    <!-- Enhanced smooth edges filter -->
+                    <filter
+                        id="smoothEdges"
+                        x="-50%"
+                        y="-50%"
+                        width="200%"
+                        height="200%"
+                    >
+                        <feGaussianBlur stdDeviation="1.5" />
+                    </filter>
+
+                    <!-- Gentle blur for highlights -->
+                    <filter
+                        id="highlightBlur"
+                        x="-50%"
+                        y="-50%"
+                        width="200%"
+                        height="200%"
+                    >
+                        <feGaussianBlur stdDeviation="2" />
+                    </filter>
+
+                    <!-- More subtle refraction for water -->
+                    <filter
+                        id="waterRefraction"
+                        x="-50%"
+                        y="-50%"
+                        width="200%"
+                        height="200%"
+                    >
+                        <feTurbulence
+                            type="fractalNoise"
+                            baseFrequency="0.01"
+                            numOctaves="2"
+                            result="noise"
+                            seed="3"
+                        />
+                        <feGaussianBlur
+                            in="noise"
+                            stdDeviation="2"
+                            result="smoothNoise"
+                        />
+                        <feDisplacementMap
+                            in="SourceGraphic"
+                            in2="smoothNoise"
+                            scale="6"
+                            xChannelSelector="R"
+                            yChannelSelector="G"
+                        />
+                    </filter>
+
+                    <!-- Improved drop shadow with better blend -->
+                    <filter
+                        id="dropShadow"
+                        x="-50%"
+                        y="-50%"
+                        width="200%"
+                        height="200%"
+                    >
+                        <feGaussianBlur
+                            in="SourceAlpha"
+                            stdDeviation="4"
+                            result="blur"
+                        />
+                        <feOffset in="blur" dx="2" dy="4" result="offsetBlur" />
+                        <feComponentTransfer in="offsetBlur">
+                            <feFuncA type="linear" slope="0.2" />
+                        </feComponentTransfer>
+                        <feMerge>
+                            <feMergeNode />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+
+                    <!-- More subtle caustics effect -->
+                    <filter
+                        id="caustics"
+                        x="-50%"
+                        y="-50%"
+                        width="200%"
+                        height="200%"
+                    >
+                        <feTurbulence
+                            type="fractalNoise"
+                            baseFrequency="0.02"
+                            numOctaves="2"
+                            result="caustics"
+                            seed="5"
+                        />
+                        <feColorMatrix
+                            type="matrix"
+                            values="0 0 0 0 1, 0 0 0 0 1, 0 0 0 0 1, 0 0 0 0.2 0"
+                            in="caustics"
+                        />
+                        <feGaussianBlur stdDeviation="2" result="blur" />
+                        <feComposite operator="in" in2="SourceGraphic" />
+                    </filter>
+
+                    <!-- Shimmer effect for idle state -->
+                    <filter id="shimmer" x="0" y="0" width="100%" height="100%">
+                        <feTurbulence
+                            type="fractalNoise"
+                            baseFrequency="0.01"
+                            numOctaves="1"
+                            result="noise"
+                            seed="1"
+                        >
+                            <animate
+                                attributeName="seed"
+                                from="1"
+                                to="10"
+                                dur="8s"
+                                repeatCount="indefinite"
+                            />
+                        </feTurbulence>
+                        <feColorMatrix
+                            type="matrix"
+                            values="0 0 0 0 1, 0 0 0 0 1, 0 0 0 0 1, 0 0 0 0.05 0"
+                            result="coloredNoise"
+                        />
+                        <feComposite
+                            operator="in"
+                            in="coloredNoise"
+                            in2="SourceGraphic"
+                            result="shimmerEffect"
+                        />
+                        <feMerge>
+                            <feMergeNode in="SourceGraphic" />
+                            <feMergeNode in="shimmerEffect" />
+                        </feMerge>
+                    </filter>
+
+                    <!-- Gradient for ripple fade effect -->
+                    <radialGradient
+                        id="rippleFadeOut"
+                        cx="50%"
+                        cy="50%"
+                        r="50%"
+                    >
+                        <stop offset="0%" stop-color="white" stop-opacity="1" />
+                        <stop
+                            offset="70%"
+                            stop-color="white"
+                            stop-opacity="0.5"
+                        />
+                        <stop
+                            offset="100%"
+                            stop-color="white"
+                            stop-opacity="0"
+                        />
+                    </radialGradient>
+
+                    <!-- Mask for ripples with soft fade-out -->
+                    <mask id="rippleMask">
+                        <circle
+                            cx="300"
+                            cy="300"
+                            r="280"
+                            fill="url(#rippleFadeOut)"
+                        />
+                    </mask>
+                </defs>
+
+                <style>
+                    /* Base styles with higher quality attributes */
+                    #droplet-base {
+                        transform-origin: center;
+                        transform-box: fill-box;
+                        vector-effect: non-scaling-stroke;
+                    }
+
+                    #droplet-highlight,
+                    #refraction-layer,
+                    #caustics-layer {
+                        transform-origin: center;
+                        transform-box: fill-box;
+                        pointer-events: none;
+                    }
+
+                    #droplet-container {
+                        cursor: pointer;
+                    }
+
+                    .highlight-spot {
+                        filter: url(#highlightBlur);
+                        mix-blend-mode: screen;
+                    }
+
+                    .ripple {
+                        transform-origin: center;
+                        vector-effect: non-scaling-stroke;
+                        pointer-events: none;
+                        mix-blend-mode: screen;
+                    }
+
+                    .splash-particle {
+                        transform-origin: center;
+                        pointer-events: none;
+                        filter: url(#highlightBlur);
+                    }
+
+                    .mist {
+                        transform-origin: center;
+                        pointer-events: none;
+                        filter: url(#highlightBlur);
+                    }
+
+                    /* Improved smooth realistic idle animation */
+                    @keyframes gentle-refraction {
+                        0% {
+                            transform: scale(1) translate(0, 0);
+                        }
+                        25% {
+                            transform: scale(1.006) translate(-1px, 1px);
+                        }
+                        50% {
+                            transform: scale(1.01) translate(0.5px, -0.8px);
+                        }
+                        75% {
+                            transform: scale(1.004) translate(0.8px, 0.4px);
+                        }
+                        100% {
+                            transform: scale(1) translate(0, 0);
+                        }
+                    }
+
+                    /* Enhanced shimmer effect for idle state */
+                    @keyframes water-shimmer {
+                        0% {
+                            opacity: 0.7;
+                            filter: url(#shimmer);
+                        }
+                        50% {
+                            opacity: 0.85;
+                            filter: url(#shimmer);
+                        }
+                        100% {
+                            opacity: 0.7;
+                            filter: url(#shimmer);
+                        }
+                    }
+
+                    /* More subtle caustics animation */
+                    @keyframes caustics-shimmer {
+                        0% {
+                            opacity: 0.08;
+                        }
+                        50% {
+                            opacity: 0.15;
+                        }
+                        100% {
+                            opacity: 0.08;
+                        }
+                    }
+
+                    .water-movement {
+                        animation: gentle-refraction 6s ease-in-out infinite;
+                    }
+
+                    .water-shimmer {
+                        animation: water-shimmer 8s ease-in-out infinite;
+                    }
+
+                    .caustics-animation {
+                        animation: caustics-shimmer 8s ease-in-out infinite;
+                    }
+
+                    /* Animate highlight spots in idle state */
+                    @keyframes spot-twinkle {
+                        0% {
+                            opacity: 0.2;
+                            transform: scale(1);
+                        }
+                        50% {
+                            opacity: 0.5;
+                            transform: scale(1.1);
+                        }
+                        100% {
+                            opacity: 0.2;
+                            transform: scale(1);
+                        }
+                    }
+
+                    .highlight-spot:nth-child(1) {
+                        animation: spot-twinkle 7s ease-in-out infinite;
+                    }
+
+                    .highlight-spot:nth-child(2) {
+                        animation: spot-twinkle 5s ease-in-out infinite 1s;
+                    }
+
+                    .highlight-spot:nth-child(3) {
+                        animation: spot-twinkle 6s ease-in-out infinite 2s;
+                    }
+                </style>
+
+                <!-- Main droplet group with expanded container -->
+                <g id="droplet-container">
+                    <!-- Base overlay for soft glow effect -->
+                    <circle
+                        id="droplet-glow"
+                        cx="300"
+                        cy="300"
+                        r="84"
+                        fill="#a9e2ff"
+                        filter="url(#softGlow)"
+                        opacity="0.3"
+                        class="water-movement"
+                    />
+
+                    <!-- Base water layer -->
+                    <circle
+                        id="droplet-base"
+                        cx="300"
+                        cy="300"
+                        r="80"
+                        fill="url(#waterBase)"
+                        filter="url(#dropShadow)"
+                        class="water-movement water-shimmer"
+                    />
+
+                    <!-- Highlight layer with enhanced animations -->
+                    <circle
+                        id="droplet-highlight"
+                        cx="285"
+                        cy="285"
+                        r="70"
+                        fill="url(#waterHighlight)"
+                        filter="url(#smoothEdges)"
+                        opacity="0.8"
+                        class="water-movement"
+                    />
+
+                    <!-- Caustics effect with softer appearance -->
+                    <circle
+                        id="caustics-layer"
+                        cx="300"
+                        cy="300"
+                        r="78"
+                        fill="none"
+                        filter="url(#caustics)"
+                        opacity="0.12"
+                        class="caustics-animation"
+                    />
+
+                    <!-- Soft highlight spots -->
+                    <circle
+                        class="highlight-spot"
+                        cx="275"
+                        cy="275"
+                        r="15"
+                        fill="white"
+                        opacity="0.4"
+                    />
+                    <circle
+                        class="highlight-spot"
+                        cx="290"
+                        cy="285"
+                        r="8"
+                        fill="white"
+                        opacity="0.5"
+                    />
+                    <circle
+                        class="highlight-spot"
+                        cx="310"
+                        cy="300"
+                        r="4"
+                        fill="white"
+                        opacity="0.3"
+                    />
+
+                    <!-- Extended ripple area with gradient mask -->
+                    <g mask="url(#rippleMask)">
+                        <!-- Ripple layers with softer edges -->
+                        <circle
+                            class="ripple ripple-primary"
+                            cx="300"
+                            cy="300"
+                            r="80"
+                            fill="none"
+                            stroke="#ffffff"
+                            stroke-width="1"
+                            opacity="0"
+                        />
+
+                        <circle
+                            class="ripple ripple-secondary"
+                            cx="300"
+                            cy="300"
+                            r="80"
+                            fill="none"
+                            stroke="#a9e2ff"
+                            stroke-width="0.8"
+                            opacity="0"
+                        />
+
+                        <circle
+                            class="ripple ripple-tertiary"
+                            cx="300"
+                            cy="300"
+                            r="80"
+                            fill="none"
+                            stroke="#cbeeff"
+                            stroke-width="0.6"
+                            opacity="0"
+                        />
+                    </g>
+
+                    <!-- Particle containers -->
+                    <g id="splash-particles"></g>
+                    <g id="mist-particles"></g>
+                </g>
+
+                <script>
+                    // Improved performance with requestAnimationFrame
+                    const dropletContainer =
+                        document.getElementById("droplet-container");
+                    const dropletGlow = document.getElementById("droplet-glow");
+                    const dropletBase = document.getElementById("droplet-base");
+                    const dropletHighlight =
+                        document.getElementById("droplet-highlight");
+                    const causticsLayer =
+                        document.getElementById("caustics-layer");
+                    const highlightSpots =
+                        document.querySelectorAll(".highlight-spot");
+                    const ripples = document.querySelectorAll(".ripple");
+                    const splashParticlesContainer =
+                        document.getElementById("splash-particles");
+                    const mistParticlesContainer =
+                        document.getElementById("mist-particles");
+
+                    // Track state
+                    let isPopped = false;
+                    let isAnimating = false;
+                    let isHovering = false;
+                    let rippleAnimations = [];
+                    let lastRippleTime = 0;
+                    let ambientRippleTimeout = null;
+
+                    // Initialize
+                    initializeDroplet();
+
+                    function initializeDroplet() {
+                        // Create splash particles
+                        createSplashParticles();
+                        createMistParticles();
+
+                        // Add event listeners with improved handling
+                        dropletContainer.addEventListener(
+                            "mouseenter",
+                            handleMouseEnter,
+                        );
+                        dropletContainer.addEventListener(
+                            "mouseleave",
+                            handleMouseLeave,
+                        );
+                        dropletContainer.addEventListener("click", popDroplet);
+
+                        // Create an initial subtle ripple effect for idle state
+                        setTimeout(() => {
+                            if (!isPopped && !isHovering) {
+                                triggerRippleEffect(0.3);
+
+                                // Schedule periodic subtle ripples during idle state
+                                setInterval(() => {
+                                    if (!isPopped && !isHovering) {
+                                        triggerRippleEffect(0.2);
+                                    }
+                                }, 8000);
+                            }
+                        }, 1000);
+                    }
+
+                    function createSplashParticles() {
+                        // Create optimized splash particles (reduced count)
+                        const particleCount = 16;
+
+                        for (let i = 0; i < particleCount; i++) {
+                            const size = 1 + Math.random() * 3;
+                            let particle;
+
+                            if (i % 3 === 0) {
+                                particle = document.createElementNS(
+                                    "http://www.w3.org/2000/svg",
+                                    "circle",
+                                );
+                                particle.setAttribute("cx", "300");
+                                particle.setAttribute("cy", "300");
+                                particle.setAttribute("r", size);
+                                particle.setAttribute("fill", "#ffffff");
+                            } else if (i % 3 === 1) {
+                                particle = document.createElementNS(
+                                    "http://www.w3.org/2000/svg",
+                                    "ellipse",
+                                );
+                                particle.setAttribute("cx", "300");
+                                particle.setAttribute("cy", "300");
+                                particle.setAttribute("rx", size * 1.5);
+                                particle.setAttribute("ry", size);
+                                particle.setAttribute("fill", "#cbeeff");
+                            } else {
+                                particle = document.createElementNS(
+                                    "http://www.w3.org/2000/svg",
+                                    "path",
+                                );
+                                particle.setAttribute(
+                                    "d",
+                                    `M300,300 c${size},${-size} ${size * 2},${-size * 1.5} ${size * 3},${-size}`,
+                                );
+                                particle.setAttribute("stroke", "#a9e2ff");
+                                particle.setAttribute("stroke-width", size / 2);
+                                particle.setAttribute("fill", "none");
+                            }
+
+                            particle.setAttribute("opacity", "0");
+                            particle.classList.add("splash-particle");
+                            splashParticlesContainer.appendChild(particle);
+                        }
+                    }
+
+                    function createMistParticles() {
+                        // Create optimized mist particles (reduced count)
+                        const particleCount = 20;
+
+                        for (let i = 0; i < particleCount; i++) {
+                            const size = 0.3 + Math.random() * 1.5;
+                            const particle = document.createElementNS(
+                                "http://www.w3.org/2000/svg",
+                                "circle",
+                            );
+                            particle.setAttribute("cx", "300");
+                            particle.setAttribute("cy", "300");
+                            particle.setAttribute("r", size);
+                            particle.setAttribute("fill", "#ffffff");
+                            particle.setAttribute("opacity", "0");
+                            particle.classList.add("mist");
+                            mistParticlesContainer.appendChild(particle);
+                        }
+                    }
+
+                    function handleMouseEnter() {
+                        if (isPopped) return;
+                        isHovering = true;
+
+                        // Apply very subtle hover effect (reduced scale)
+                        enhanceWaterEffect();
+
+                        // Create a subtle ripple effect on enter
+                        triggerRippleEffect(0.4);
+                    }
+
+                    function handleMouseLeave() {
+                        if (isPopped) return;
+                        isHovering = false;
+
+                        // Clear any scheduled ambient ripples
+                        if (ambientRippleTimeout) {
+                            clearTimeout(ambientRippleTimeout);
+                            ambientRippleTimeout = null;
+                        }
+
+                        // Reset water effect
+                        resetWaterEffect();
+                    }
+
+                    let hoverPulseAnimation = null;
+
+                    function enhanceWaterEffect() {
+                        // Cancel any existing hover pulse animation to prevent conflicts
+                        if (hoverPulseAnimation) {
+                            clearTimeout(hoverPulseAnimation);
+                            hoverPulseAnimation = null;
+                        }
+
+                        // Apply immediate styles without animation first to prevent flickering
+                        const presetTransition = "none";
+
+                        // Pre-set all elements to their initial hover state without transition
+                        dropletGlow.style.transition = presetTransition;
+                        dropletBase.style.transition = presetTransition;
+                        dropletHighlight.style.transition = presetTransition;
+                        causticsLayer.style.transition = presetTransition;
+
+                        // Apply initial styles
+                        dropletGlow.style.transform = "scale(1.01)";
+                        dropletGlow.style.opacity = "0.32";
+
+                        dropletBase.style.transform = "scale(1.005)";
+                        dropletBase.style.filter =
+                            "url(#dropShadow) brightness(1.05)";
+
+                        dropletHighlight.style.transform = "scale(1.01)";
+                        dropletHighlight.style.opacity = "0.82";
+
+                        causticsLayer.style.opacity = "0.14";
+
+                        // Force reflow to apply styles immediately before adding transitions
+                        void dropletGlow.offsetWidth;
+                        void dropletBase.offsetWidth;
+                        void dropletHighlight.offsetWidth;
+
+                        // Remove CSS animations
+                        dropletGlow.classList.remove("water-movement");
+                        dropletBase.classList.remove(
+                            "water-movement",
+                            "water-shimmer",
+                        );
+                        dropletHighlight.classList.remove("water-movement");
+
+                        // Make highlight spots slightly brighter but don't move them
+                        highlightSpots.forEach((spot) => {
+                            spot.style.animation = "none";
+                            spot.style.transition = "none";
+                            spot.style.opacity =
+                                parseFloat(spot.getAttribute("opacity")) * 1.1;
+                            // Force reflow
+                            void spot.offsetWidth;
+                        });
+
+                        // Brief delay before starting pulse animation to ensure smooth transition
+                        setTimeout(() => {
+                            // Set up hover animation with synchronized timing
+                            const pulseIn = () => {
+                                if (!isHovering || isPopped) return;
+
+                                // Apply smooth transitions after initial styles are set
+                                const transitionDuration = "1.2s";
+                                const transitionEasing =
+                                    "cubic-bezier(0.4, 0.0, 0.2, 1)"; // Material easing curve for smooth motion
+
+                                dropletGlow.style.transition = `transform ${transitionDuration} ${transitionEasing}, opacity ${transitionDuration} ${transitionEasing}`;
+                                dropletBase.style.transition = `transform ${transitionDuration} ${transitionEasing}, filter ${transitionDuration} ${transitionEasing}`;
+                                dropletHighlight.style.transition = `transform ${transitionDuration} ${transitionEasing}, opacity ${transitionDuration} ${transitionEasing}`;
+
+                                // Synchronized subtle expansion
+                                dropletGlow.style.transform = "scale(1.02)";
+                                dropletGlow.style.opacity = "0.34";
+
+                                dropletBase.style.transform = "scale(1.015)";
+                                dropletBase.style.filter =
+                                    "url(#dropShadow) brightness(1.08)";
+
+                                dropletHighlight.style.transform =
+                                    "scale(1.018)";
+                                dropletHighlight.style.opacity = "0.85";
+
+                                // Subtle movement of highlight spots
+                                highlightSpots.forEach((spot) => {
+                                    spot.style.transition = `opacity ${transitionDuration} ${transitionEasing}`;
+                                    spot.style.opacity =
+                                        parseFloat(
+                                            spot.getAttribute("opacity"),
+                                        ) * 1.3;
+                                });
+
+                                // Schedule pulse out with animation frame for smoother timing
+                                hoverPulseAnimation = setTimeout(
+                                    pulseOut,
+                                    1200,
+                                );
+                            };
+
+                            const pulseOut = () => {
+                                if (!isHovering || isPopped) return;
+
+                                // Synchronized subtle contraction
+                                dropletGlow.style.transform = "scale(1.01)";
+                                dropletGlow.style.opacity = "0.32";
+
+                                dropletBase.style.transform = "scale(1.005)";
+                                dropletBase.style.filter =
+                                    "url(#dropShadow) brightness(1.05)";
+
+                                dropletHighlight.style.transform =
+                                    "scale(1.01)";
+                                dropletHighlight.style.opacity = "0.82";
+
+                                // Subtle movement of highlight spots
+                                highlightSpots.forEach((spot) => {
+                                    spot.style.opacity =
+                                        parseFloat(
+                                            spot.getAttribute("opacity"),
+                                        ) * 1.1;
+                                });
+
+                                // Schedule next pulse with animation frame for smoother timing
+                                hoverPulseAnimation = setTimeout(pulseIn, 1200);
+                            };
+
+                            // Start the pulse animation
+                            pulseIn();
+                        }, 50); // Short delay to ensure everything is ready
+
+                        // Create a subtle ripple effect periodically during hover
+                        if (ambientRippleTimeout) {
+                            clearTimeout(ambientRippleTimeout);
+                        }
+
+                        // Schedule first ripple with a slight delay to avoid initial stutter
+                        ambientRippleTimeout = setTimeout(() => {
+                            if (isHovering && !isPopped) {
+                                triggerRippleEffect(0.3);
+
+                                // Then schedule subsequent ripples
+                                const scheduleHoverRipple = () => {
+                                    if (!isHovering || isPopped) return;
+
+                                    ambientRippleTimeout = setTimeout(
+                                        () => {
+                                            if (isHovering && !isPopped) {
+                                                triggerRippleEffect(0.3);
+                                                scheduleHoverRipple();
+                                            }
+                                        },
+                                        3000 + Math.random() * 500,
+                                    ); // Add slight randomness to timing
+                                };
+
+                                scheduleHoverRipple();
+                            }
+                        }, 800);
+                    }
+
+                    function resetWaterEffect() {
+                        // Cancel any existing hover pulse animation
+                        if (hoverPulseAnimation) {
+                            clearTimeout(hoverPulseAnimation);
+                            hoverPulseAnimation = null;
+                        }
+
+                        // Use a consistent transition for all elements
+                        const transitionDuration = "0.6s";
+                        const transitionEasing =
+                            "cubic-bezier(0.4, 0.0, 0.2, 1)"; // Material easing for smoothness
+
+                        // Apply transitions for a smooth return to normal state
+                        dropletGlow.style.transition = `transform ${transitionDuration} ${transitionEasing}, opacity ${transitionDuration} ${transitionEasing}`;
+                        dropletBase.style.transition = `transform ${transitionDuration} ${transitionEasing}, filter ${transitionDuration} ${transitionEasing}`;
+                        dropletHighlight.style.transition = `transform ${transitionDuration} ${transitionEasing}, opacity ${transitionDuration} ${transitionEasing}`;
+                        causticsLayer.style.transition = `opacity ${transitionDuration} ${transitionEasing}`;
+
+                        // Reset to base state
+                        dropletGlow.style.transform = "scale(1)";
+                        dropletGlow.style.opacity = "0.3";
+
+                        dropletBase.style.transform = "scale(1)";
+                        dropletBase.style.filter = "url(#dropShadow)";
+
+                        dropletHighlight.style.transform = "scale(1)";
+                        dropletHighlight.style.opacity = "0.8";
+
+                        causticsLayer.style.opacity = "0.12";
+
+                        // Smoothly reset highlights
+                        highlightSpots.forEach((spot) => {
+                            spot.style.transition = `opacity ${transitionDuration} ${transitionEasing}`;
+                            spot.style.opacity = spot.getAttribute("opacity");
+                        });
+
+                        // Don't add class animations immediately - wait for transition to complete
+                        const resetClassAnimations = () => {
+                            if (!isPopped && !isHovering) {
+                                // First remove transitions to prevent stuttering when animations start
+                                dropletGlow.style.transition = "none";
+                                dropletBase.style.transition = "none";
+                                dropletHighlight.style.transition = "none";
+                                causticsLayer.style.transition = "none";
+
+                                // Force reflow
+                                void dropletGlow.offsetWidth;
+
+                                // Add animations back
+                                dropletGlow.classList.add("water-movement");
+                                dropletBase.classList.add(
+                                    "water-movement",
+                                    "water-shimmer",
+                                );
+                                dropletHighlight.classList.add(
+                                    "water-movement",
+                                );
+
+                                // Reset highlight spots
+                                highlightSpots.forEach((spot, index) => {
+                                    spot.style.transition = "none";
+                                    spot.style.animation = "none";
+                                    spot.style.opacity =
+                                        spot.getAttribute("opacity");
+
+                                    // Force reflow
+                                    void spot.offsetWidth;
+
+                                    // Restore animations with proper staggering
+                                    if (index === 0) {
+                                        spot.style.animation =
+                                            "spot-twinkle 7s ease-in-out infinite";
+                                    } else if (index === 1) {
+                                        spot.style.animation =
+                                            "spot-twinkle 5s ease-in-out infinite 1s";
+                                    } else {
+                                        spot.style.animation =
+                                            "spot-twinkle 6s ease-in-out infinite 2s";
+                                    }
+                                });
+                            }
+                        };
+
+                        // Use setTimeout with the same duration as the transition to ensure smoothness
+                        setTimeout(
+                            resetClassAnimations,
+                            parseFloat(transitionDuration) * 1000,
+                        );
+                    }
+
+                    function triggerRippleEffect(intensityMultiplier = 1) {
+                        // Cancel any existing ripple animations to prevent buildup
+                        rippleAnimations.forEach((animation) => {
+                            if (animation.ripple && animation.timeout) {
+                                clearTimeout(animation.timeout);
+                            }
+                        });
+                        rippleAnimations = [];
+
+                        // Animate each ripple layer with slight delay between them
+                        ripples.forEach((ripple, index) => {
+                            // Reset ripple style
+                            ripple.style.transition = "none";
+                            ripple.style.transform = "scale(1)";
+                            ripple.style.opacity = "0";
+                            ripple.style.strokeWidth = parseFloat(
+                                ripple.getAttribute("stroke-width"),
+                            );
+
+                            // Force reflow
+                            ripple.offsetWidth;
+
+                            // Vary parameters by ripple
+                            const delay = index * 150;
+                            const duration = 2000 + index * 300; // Shorter duration
+                            const maxScale = 3 + index * 0.3; // Smaller max scale
+                            const maxOpacity =
+                                (0.3 - index * 0.08) * intensityMultiplier; // Lower opacity
+
+                            // Start ripple animation after delay
+                            const timeout = setTimeout(() => {
+                                // Apply smoother easing curve
+                                ripple.style.transition = `
+                                transform ${duration}ms cubic-bezier(0.1, 0.5, 0.3, 1),
+                                opacity ${duration}ms cubic-bezier(0.1, 0.4, 0.3, 1),
+                                stroke-width ${duration}ms ease-out
+                            `;
+
+                                // Apply transforms with intensity multiplier
+                                ripple.style.transform = `scale(${maxScale})`;
+                                ripple.style.opacity = maxOpacity;
+
+                                // Thin out the stroke as it expands
+                                ripple.style.strokeWidth =
+                                    parseFloat(
+                                        ripple.getAttribute("stroke-width"),
+                                    ) * 0.5;
+
+                                // Start fading out earlier
+                                const fadeTimeout = setTimeout(() => {
+                                    // More gradual fade out with better curve
+                                    ripple.style.transition = `opacity ${duration * 0.5}ms cubic-bezier(0.33, 0, 0.67, 1)`;
+                                    ripple.style.opacity = "0";
+                                }, duration * 0.4); // Start fading at 40% through animation
+
+                                rippleAnimations.push({
+                                    ripple,
+                                    timeout: fadeTimeout,
+                                });
+                            }, delay);
+
+                            rippleAnimations.push({ ripple, timeout });
+                        });
+
+                        // Update last ripple time
+                        lastRippleTime = Date.now();
+                    }
+
+                    function popDroplet() {
+                        if (isPopped || isAnimating) return;
+                        isAnimating = true;
+                        isPopped = true;
+
+                        // Cancel any existing animations or timeouts
+                        if (hoverPulseAnimation) {
+                            clearTimeout(hoverPulseAnimation);
+                            hoverPulseAnimation = null;
+                        }
+
+                        if (ambientRippleTimeout) {
+                            clearTimeout(ambientRippleTimeout);
+                            ambientRippleTimeout = null;
+                        }
+
+                        // Stop all CSS animations immediately
+                        dropletGlow.classList.remove("water-movement");
+                        dropletBase.classList.remove(
+                            "water-movement",
+                            "water-shimmer",
+                        );
+                        dropletHighlight.classList.remove("water-movement");
+                        causticsLayer.classList.remove("caustics-animation");
+
+                        // Remove spot animations
+                        highlightSpots.forEach((spot) => {
+                            spot.style.animation = "none";
+                        });
+
+                        // Group all elements to keep them perfectly synchronized
+                        const layers = [
+                            dropletGlow,
+                            dropletBase,
+                            dropletHighlight,
+                            causticsLayer,
+                        ];
+
+                        // Use transform3d to enable hardware acceleration for smoother animation
+                        const applyHardwareAcceleration = (element) => {
+                            if (element) {
+                                element.style.backfaceVisibility = "hidden";
+                                element.style.perspective = "1000px";
+                                // Use transform3d to force GPU acceleration
+                                const currentTransform =
+                                    element.style.transform || "scale(1)";
+                                element.style.transform = `${currentTransform} translateZ(0)`;
+                            }
+                        };
+
+                        // Apply hardware acceleration to all layers
+                        layers.forEach(applyHardwareAcceleration);
+                        highlightSpots.forEach(applyHardwareAcceleration);
+
+                        // Set all elements to the same transform origin
+                        const setUniformOrigin = (element) => {
+                            if (element) {
+                                element.style.transformOrigin = "center center";
+                            }
+                        };
+
+                        layers.forEach(setUniformOrigin);
+                        highlightSpots.forEach(setUniformOrigin);
+
+                        // Use a one-time setup with no transition to prevent stuttering
+                        const setupWithoutTransition = (element) => {
+                            if (element) {
+                                element.style.transition = "none";
+                            }
+                        };
+
+                        layers.forEach(setupWithoutTransition);
+                        highlightSpots.forEach(setupWithoutTransition);
+
+                        // Force reflow for all elements
+                        void dropletGlow.offsetWidth;
+
+                        // Now set up the expansion animation with beautiful cubic-bezier
+                        const expansionTransition =
+                            "transform 0.14s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.14s ease-out";
+
+                        layers.forEach((layer) => {
+                            if (layer)
+                                layer.style.transition = expansionTransition;
+                        });
+
+                        highlightSpots.forEach((spot) => {
+                            spot.style.transition = expansionTransition;
+                        });
+
+                        // Apply expansion styles
+                        dropletGlow.style.transform =
+                            "scale(1.16) translateZ(0)";
+                        dropletGlow.style.opacity = "0.6";
+
+                        dropletBase.style.transform =
+                            "scale(1.14) translateZ(0)";
+                        dropletBase.style.filter =
+                            "url(#dropShadow) brightness(1.15)";
+
+                        dropletHighlight.style.transform =
+                            "scale(1.14) translateZ(0)";
+                        dropletHighlight.style.opacity = "1";
+
+                        causticsLayer.style.transform =
+                            "scale(1.14) translateZ(0)";
+                        causticsLayer.style.opacity = "0.25";
+
+                        // Increase brightness of highlight spots
+                        highlightSpots.forEach((spot) => {
+                            spot.style.transform = "scale(1.2) translateZ(0)";
+                            spot.style.opacity = "0.8";
+                        });
+
+                        // Brief pause at maximum expansion, using requestAnimationFrame for smoother timing
+                        requestAnimationFrame(() => {
+                            setTimeout(() => {
+                                // Unified collapse animation with faster cubic-bezier for a snappy pop
+                                const collapseTransition =
+                                    "transform 0.18s cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 0.15s ease-out";
+
+                                layers.forEach((layer) => {
+                                    if (layer)
+                                        layer.style.transition =
+                                            collapseTransition;
+                                });
+
+                                highlightSpots.forEach((spot) => {
+                                    spot.style.transition = collapseTransition;
+                                });
+
+                                // All layers collapse together at the same rate
+                                dropletGlow.style.transform =
+                                    "scale(0.1) translateZ(0)";
+                                dropletGlow.style.opacity = "0";
+
+                                dropletBase.style.transform =
+                                    "scale(0.1) translateZ(0)";
+                                dropletBase.style.opacity = "0";
+
+                                dropletHighlight.style.transform =
+                                    "scale(0.1) translateZ(0)";
+                                dropletHighlight.style.opacity = "0";
+
+                                causticsLayer.style.transform =
+                                    "scale(0.1) translateZ(0)";
+                                causticsLayer.style.opacity = "0";
+
+                                // Fade out highlight spots
+                                highlightSpots.forEach((spot) => {
+                                    spot.style.transform =
+                                        "scale(0.1) translateZ(0)";
+                                    spot.style.opacity = "0";
+                                });
+
+                                // Use requestAnimationFrame for triggering ripples and particles for better performance
+                                requestAnimationFrame(() => {
+                                    setTimeout(() => {
+                                        // Final cleanup - set scale to 0 after opacity is gone
+                                        layers.forEach((layer) => {
+                                            if (layer)
+                                                layer.style.transform =
+                                                    "scale(0) translateZ(0)";
+                                        });
+
+                                        highlightSpots.forEach((spot) => {
+                                            spot.style.transform =
+                                                "scale(0) translateZ(0)";
+                                        });
+
+                                        // Create multiple layers of ripples for pop - increased intensity
+                                        triggerRippleEffect(1.5);
+
+                                        // Schedule animation frames for particles
+                                        requestAnimationFrame(() => {
+                                            // Animate splash particles
+                                            animateSplashParticles();
+
+                                            // Animate mist particles with slight delay for performance
+                                            setTimeout(() => {
+                                                animateMistParticles();
+                                            }, 30);
+
+                                            // Schedule one additional ripple for sustained effect
+                                            setTimeout(() => {
+                                                if (isPopped)
+                                                    triggerRippleEffect(0.7);
+                                            }, 180);
+                                        });
+                                    }, 50);
+                                });
+                            }, 140);
+                        });
+                    }
+
+                    function animateSplashParticles() {
+                        const splashParticles =
+                            document.querySelectorAll(".splash-particle");
+
+                        // OPTIMIZED: Using batch processing to reduce calculations
+                        const batchSize = 4; // Process 4 particles at once
+                        const totalBatches = Math.ceil(
+                            splashParticles.length / batchSize,
+                        );
+
+                        for (let batch = 0; batch < totalBatches; batch++) {
+                            setTimeout(() => {
+                                const startIdx = batch * batchSize;
+                                const endIdx = Math.min(
+                                    startIdx + batchSize,
+                                    splashParticles.length,
+                                );
+
+                                for (let i = startIdx; i < endIdx; i++) {
+                                    const particle = splashParticles[i];
+
+                                    // More dramatic burst animation
+                                    // Calculate trajectory for bursting outward
+                                    const angle = Math.random() * Math.PI * 2; // Full circle
+                                    const initialSpeed =
+                                        10 + Math.random() * 15; // Faster initial speed
+                                    const gravity = 0.5 + Math.random() * 0.3; // Slightly stronger gravity
+
+                                    // Set initial state
+                                    particle.style.transition = "none";
+                                    particle.style.transform =
+                                        "translate(0, 0)";
+                                    particle.style.opacity = "0";
+
+                                    // Force reflow
+                                    particle.offsetWidth;
+
+                                    // Initial velocity with more upward bias for dramatic splash
+                                    let vx = Math.cos(angle) * initialSpeed;
+                                    let vy = Math.sin(angle) * initialSpeed - 8; // Stronger upward bias
+                                    let x = 0,
+                                        y = 0;
+                                    let t = 0;
+                                    const dt = 1 / 30; // Larger time step for efficiency
+
+                                    // Make particle visible with higher opacity
+                                    particle.style.opacity =
+                                        Math.random() * 0.4 + 0.6;
+
+                                    // OPTIMIZED: Set keyframes instead of using requestAnimationFrame
+                                    // This reduces the computational load significantly
+                                    const keyframes = [];
+                                    const totalTime = 1.2; // Total animation time in seconds
+                                    const steps = 12; // Reduced number of steps
+
+                                    for (let step = 0; step < steps; step++) {
+                                        t += totalTime / steps;
+
+                                        // Update position with gravity
+                                        vy += gravity * t; // Apply gravity with time factor
+                                        x += vx * (totalTime / steps) * 15;
+                                        y += vy * (totalTime / steps) * 15;
+
+                                        // Calculate opacity based on time
+                                        let stepOpacity = 1;
+                                        if (t > 0.2) {
+                                            stepOpacity = Math.max(
+                                                0,
+                                                1 - (t - 0.2) / 1.0,
+                                            );
+                                        }
+
+                                        keyframes.push({
+                                            transform: `translate(${x}px, ${y}px)`,
+                                            opacity:
+                                                stepOpacity *
+                                                (Math.random() * 0.4 + 0.6),
+                                        });
+                                    }
+
+                                    // Add final keyframe with opacity 0
+                                    keyframes.push({
+                                        transform: `translate(${x}px, ${y}px)`,
+                                        opacity: 0,
+                                    });
+
+                                    // Apply the animation
+                                    particle.animate(keyframes, {
+                                        duration: totalTime * 1000,
+                                        easing: "cubic-bezier(0.25, 0.1, 0.25, 1)",
+                                        fill: "forwards",
+                                    });
+                                }
+                            }, batch * 15); // Stagger batches slightly
+                        }
+                    }
+
+                    function animateMistParticles() {
+                        const mistParticles =
+                            document.querySelectorAll(".mist");
+
+                        // OPTIMIZED: Using batch processing like with splash particles
+                        const batchSize = 5;
+                        const totalBatches = Math.ceil(
+                            mistParticles.length / batchSize,
+                        );
+
+                        for (let batch = 0; batch < totalBatches; batch++) {
+                            setTimeout(() => {
+                                const startIdx = batch * batchSize;
+                                const endIdx = Math.min(
+                                    startIdx + batchSize,
+                                    mistParticles.length,
+                                );
+
+                                for (let i = startIdx; i < endIdx; i++) {
+                                    const particle = mistParticles[i];
+
+                                    // Calculate gentle upward trajectory
+                                    const angle =
+                                        -Math.PI / 2 +
+                                        ((Math.random() - 0.5) * Math.PI) / 3; // Mostly upward
+                                    const speed = 0.8 + Math.random() * 1.5; // Slower for more mist-like effect
+
+                                    // Set initial state
+                                    particle.style.transition = "none";
+                                    particle.style.transform =
+                                        "translate(0, 0) scale(0.5)";
+                                    particle.style.opacity = "0";
+
+                                    // Force reflow
+                                    particle.offsetWidth;
+
+                                    // Initial parameters
+                                    const vx = Math.cos(angle) * speed;
+                                    const vy = Math.sin(angle) * speed;
+                                    const startX = (Math.random() - 0.5) * 15; // Slight random initial position
+                                    const startY = (Math.random() - 0.5) * 15;
+                                    const lifetime = 1.5 + Math.random() * 1; // Slightly shorter lifetime
+                                    const opacity = Math.random() * 0.3 + 0.2; // Slightly higher opacity
+
+                                    // OPTIMIZED: Use simpler keyframe animation instead of requestAnimationFrame
+                                    const keyframes = [];
+                                    const steps = 10;
+
+                                    for (let step = 0; step < steps; step++) {
+                                        const progress = step / (steps - 1);
+                                        const t = progress * lifetime;
+
+                                        // Calculate position with some drift
+                                        const x =
+                                            startX +
+                                            vx * t * 25 +
+                                            (Math.random() - 0.5) *
+                                                2 *
+                                                progress;
+                                        const y =
+                                            startY + vy * t * 25 - 2 * progress; // Additional upward drift
+
+                                        // Calculate scale - gradually increase then stabilize
+                                        const scale =
+                                            0.5 + Math.min(0.7, progress * 1.2);
+
+                                        // Calculate opacity - fade in then out
+                                        let stepOpacity = opacity;
+                                        if (progress < 0.3) {
+                                            // Fade in during first 30%
+                                            stepOpacity =
+                                                opacity * (progress / 0.3);
+                                        } else if (progress > 0.6) {
+                                            // Fade out during last 40%
+                                            stepOpacity =
+                                                opacity *
+                                                (1 - (progress - 0.6) / 0.4);
+                                        }
+
+                                        keyframes.push({
+                                            transform: `translate(${x}px, ${y}px) scale(${scale})`,
+                                            opacity: stepOpacity,
+                                        });
+                                    }
+
+                                    // Add final keyframe with opacity 0
+                                    keyframes.push({
+                                        transform: `translate(${startX + vx * lifetime * 25}px, ${startY + vy * lifetime * 25 - 2}px) scale(1.2)`,
+                                        opacity: 0,
+                                    });
+
+                                    // Apply the animation
+                                    particle.animate(keyframes, {
+                                        duration: lifetime * 1000,
+                                        easing: "ease-out",
+                                        fill: "forwards",
+                                    });
+                                }
+                            }, batch * 25); // Stagger batches for more natural look
+                        }
+                    }
+                </script>
+            </svg>
+        </div>
+    </body>
+</html>
